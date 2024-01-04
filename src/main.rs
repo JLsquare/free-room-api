@@ -186,6 +186,7 @@ async fn get_rooms_availability(
         }
     }
 
+    room_availabilities.sort_by(|a, b| a.name.cmp(&b.name));
     let rooms_json = serde_json::to_string(&room_availabilities)?;
     Ok(HttpResponse::Ok().content_type("application/json").body(rooms_json))
 }
