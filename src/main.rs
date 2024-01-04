@@ -136,12 +136,12 @@ async fn main() -> Result<(), AppError> {
 }
 
 async fn update_rooms(rooms: &Arc<Mutex<HashMap<String, Room>>>) {
-    let current_date = Utc::now().naive_utc().date() - Duration::weeks(START_WEEK_OFFSET);
-    let two_weeks_date = current_date + Duration::weeks(END_WEEK_OFFSET);
+    let start_date = Utc::now().naive_utc().date() - Duration::weeks(START_WEEK_OFFSET);
+    let end_date = start_date + Duration::weeks(END_WEEK_OFFSET);
 
     for resource in RESOURCES.iter() {
         let mut rooms_guard = rooms.lock().await;
-        if let Err(e) = process_resource(resource, &mut rooms_guard, &current_date, &two_weeks_date).await {
+        if let Err(e) = process_resource(resource, &mut rooms_guard, &start_date, &end_date).await {
             eprintln!("Error processing resource {}: {}", resource, e);
         }
     }
@@ -166,10 +166,10 @@ async fn get_all_rooms_info(
 #[get("/api/lite/{hour_offset}")]
 async fn get_rooms_availability(
     data: web::Data<Arc<Mutex<HashMap<String, Room>>>>,
-    path: web::Path<Option<i64>>,
+    path: web::Path<i64>,
 ) -> Result<HttpResponse, AppError> {
     let mut rooms = data.lock().await;
-    let offset = path.into_inner().unwrap_or(0) * 3600;
+    let offset = path.into_inner() * 3600;
     let current_timestamp = Utc::now().naive_utc().timestamp() + offset;
     let mut room_availabilities = Vec::new();
     let regex = Regex::new(r"^\bV-[AB]\s?\d*?\b$")?;
@@ -204,12 +204,10 @@ fn calculate_room_availability(room: &Room, current_timestamp: i64) -> (String, 
 async fn process_resource(
     resource: &i32,
     rooms: &mut HashMap<String, Room>,
-    current_date: &chrono::NaiveDate,
-    two_weeks_date: &chrono::NaiveDate
+    start_date: &chrono::NaiveDate,
+    end_date: &chrono::NaiveDate
 ) -> Result<(), AppError> {
-    println!("Resource: {}", resource);
-    let url = format_resource_url(resource, current_date, two_weeks_date);
-
+    let url = format_resource_url(resource, start_date, end_date);
     let ics = reqwest::get(&url).await?.text().await?;
     let calendar = IcalParser::new(ics.as_bytes()).next().ok_or(AppError::ParserError)??;
 

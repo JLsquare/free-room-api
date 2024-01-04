@@ -15,10 +15,14 @@
 
 ### API Endpoints
 1. **All Rooms**: `/api/all` (GET)
-    - Returns all room availability.
+    - Returns all room availability slots.
 
 2. **Room Availability by Hour Offset**: `/api/lite/{hour_offset}` (GET)
-    - `{hour_offset}` is optional; defaults to current time.
+    - hour_offset: use '0', else it's for testing purposes.
+    - Returns room availability for each rooms with :
+      - `name`: name of the room.
+      - `status`: if the room is available.
+      - `duration`: how long the room is available for or in how long the room will be available for.
 
 ### Note
 - Room data is auto-updated periodically.
