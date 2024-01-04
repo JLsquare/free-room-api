@@ -4,6 +4,7 @@ use thiserror::Error;
 use actix_web::{web, App, HttpServer, HttpResponse, get, ResponseError};
 use serde::Serialize;
 use std::sync::Arc;
+use actix_cors::Cors;
 use ical::IcalParser;
 use ical::parser::ical::component::IcalEvent;
 use ical::parser::ParserError;
@@ -124,6 +125,9 @@ async fn main() -> Result<(), AppError> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::permissive()
+            )
             .app_data(web::Data::new(rooms.clone()))
             .service(get_all_rooms_info)
             .service(get_rooms_availability)
