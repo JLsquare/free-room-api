@@ -124,6 +124,8 @@ async fn main() -> Result<(), AppError> {
         }
     });
 
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+
     HttpServer::new(move || {
         App::new()
             .wrap(
@@ -133,7 +135,7 @@ async fn main() -> Result<(), AppError> {
             .service(get_all_rooms_info)
             .service(get_rooms_availability)
     })
-        .bind("127.0.0.1:8080")?
+        .bind(format!("127.0.0.1:{}", port))?
         .run()
         .await?;
 
@@ -152,7 +154,7 @@ async fn update_rooms(rooms: &Arc<Mutex<HashMap<String, Room>>>) {
     }
 }
 
-#[get("/api/all")]
+#[get("/all")]
 async fn get_all_rooms_info(
     data: web::Data<Arc<Mutex<HashMap<String, Room>>>>
 ) -> Result<HttpResponse, AppError> {
@@ -168,7 +170,7 @@ async fn get_all_rooms_info(
     Ok(HttpResponse::Ok().content_type("application/json").body(rooms_json))
 }
 
-#[get("/api/lite/{hour_offset}")]
+#[get("/lite/{hour_offset}")]
 async fn get_rooms_availability(
     data: web::Data<Arc<Mutex<HashMap<String, Room>>>>,
     path: web::Path<i64>,
