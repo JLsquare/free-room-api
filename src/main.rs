@@ -108,6 +108,7 @@ struct RoomAvailability {
     name: String,
     status: String,
     duration: i64,
+    open: bool,
 }
 
 #[tokio::main]
@@ -181,11 +182,12 @@ async fn get_rooms_availability(
     for (name, room) in rooms.iter_mut() {
         if regex.is_match(name) {
             room.compute_availability(current_timestamp);
-            let availability_info = calculate_room_availability(room, current_timestamp);
+            let availability_info = calculate_room_availability(room, current_timestamp)?;
             room_availabilities.push(RoomAvailability {
                 name: name.clone(),
                 status: availability_info.0,
                 duration: availability_info.1,
+                open: availability_info.2,
             });
         }
     }
@@ -195,15 +197,27 @@ async fn get_rooms_availability(
     Ok(HttpResponse::Ok().content_type("application/json").body(rooms_json))
 }
 
-fn calculate_room_availability(room: &Room, current_timestamp: i64) -> (String, i64) {
+fn calculate_room_availability(room: &Room, current_timestamp: i64) -> Result<(String, i64, bool), AppError> {
+    let today_8am = Utc::now()
+        .naive_utc()
+        .date()
+        .and_hms_opt(8, 0, 0)
+        .ok_or_else(|| AppError::ParseError)?
+        .timestamp();
+    let tomorrow_8am = today_8am + 86400;
+    let mut open = false;
     for &(start, end) in &room.availability {
+        if start >= today_8am && end <= tomorrow_8am {
+            open = true;
+        }
+
         if start <= current_timestamp && current_timestamp < end {
-            return ("available".to_string(), end - current_timestamp);
+            return Ok(("available".to_string(), end - current_timestamp, open));
         } else if start > current_timestamp {
-            return ("unavailable".to_string(), start - current_timestamp);
+            return Ok(("unavailable".to_string(), start - current_timestamp, open));
         }
     }
-    ("unavailable".to_string(), -1)
+    Ok(("unavailable".to_string(), -1, false))
 }
 
 async fn process_resource(
